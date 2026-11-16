@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="theme-color" content="#000000"><link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon-v6.png"><link rel="icon" type="image/png" href="/assets/favicon-v6.png"><title>Music Remote</title>
+<style>
+:root{color-scheme:dark;--ink:#ffffff;--muted:#999999;--pink:#fa2d48;--surface:#111111}*{box-sizing:border-box}body{margin:0;background:#000000;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100svh}body:before{content:"";position:fixed;inset:0;pointer-events:none;background:none}main{position:relative;max-width:460px;margin:auto;padding:max(28px,env(safe-area-inset-top)) 30px max(26px,env(safe-area-inset-bottom))}header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}.brand{font-size:12px;letter-spacing:2.5px;font-weight:650}.status{display:flex;align-items:center;gap:7px;font-size:11px;color:#bcb9c2}.dot{height:6px;width:6px;border-radius:50%;background:#777}.dot.live{background:#8de5b4;box-shadow:0 0 12px #8de5b455}.cover{position:relative;aspect-ratio:1;width:100%;border-radius:20px;overflow:hidden;background:#111111;box-shadow:0 18px 45px #0006;border:1px solid #ffffff12;display:grid;place-items:center}.cover:before,.cover:after{content:"";position:absolute;border:1px solid #ffffff14;border-radius:50%;width:75%;height:75%}.cover:after{width:55%;height:55%}.cover>svg{width:70px;height:70px;color:#ddd1db88}.cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1}.cover img[hidden]{display:none}.info{margin-top:28px}.eyebrow{font-size:10px;letter-spacing:2px;color:var(--pink);font-weight:650}.info h1{font-size:25px;letter-spacing:-.6px;margin:9px 0 5px;line-height:1.2;overflow-wrap:anywhere}.artist{font-size:16px;color:#c4bfc9;min-height:20px}.album{font-size:12px;color:var(--muted);margin-top:7px;min-height:15px;overflow-wrap:anywhere}.timeline{margin-top:23px}.track{height:3px;background:#ffffff1c;border-radius:10px;overflow:hidden}.fill{background:#cbc4ce;width:0;height:100%;transition:width 1s linear}.times{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:8px}.transport{display:flex;justify-content:center;align-items:center;gap:36px;margin:25px 0 30px}button{border:0;color:inherit;background:transparent;display:grid;place-items:center;padding:12px;touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:transparent}button:focus-visible{outline:2px solid var(--pink);outline-offset:4px}button svg{width:28px;height:28px;fill:currentColor}button:active{transform:scale(.95)}button:disabled{opacity:.25;cursor:default}button.play{width:74px;height:74px;border-radius:50%;background:var(--ink);color:#17151c;box-shadow:0 5px 24px #0004}button.play svg{width:31px;height:31px}.volume{background:#ffffff05;border:1px solid #ffffff0b;border-radius:18px;padding:14px 14px 17px}.volume-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:11px;color:var(--muted)}.volume-head span:first-child{letter-spacing:1px}.volume-row{display:flex;align-items:center;gap:12px}.volume-row button{padding:5px;color:#c3bec8}.volume-row svg{width:20px;height:20px}.range{width:100%;accent-color:var(--pink);height:28px;margin:0;touch-action:pan-y}.volume-label{font-size:10px;margin-top:5px;color:#827e8c;text-align:center}.note{font-size:12px;line-height:1.65;color:#b4aebd;margin-top:18px;min-height:20px;text-align:center}.footer{display:flex;justify-content:center;gap:8px;font-size:10px;color:#696573;letter-spacing:1px;margin-top:24px}.footer svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.4}.toast{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);max-width:90%;width:max-content;border:1px solid #ffffff22;background:#222222;padding:12px 18px;border-radius:14px;font-size:13px;box-shadow:0 5px 25px #0007;z-index:5}.toast[hidden]{display:none}@media(min-width:720px){main{padding-top:44px;padding-bottom:44px}}@media(max-height:750px) and (max-width:600px){main{padding-top:18px;padding-left:34px;padding-right:34px}header{margin-bottom:18px}.cover{width:84%;margin:auto}.info{margin-top:20px}.timeline{margin-top:18px}.transport{margin:16px 0 20px}.footer{margin-top:18px}}
+
+.header-actions{display:flex;align-items:center;gap:10px}.scan-trigger{display:flex;gap:5px;padding:8px 9px;border:1px solid #ffffff22;border-radius:10px;font-size:11px;white-space:nowrap}.scan-trigger svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}.home-tip{font-size:11px;line-height:1.7;text-align:center;color:#97949f;margin:14px 0 0}.home-tip strong{color:#d8d3dd;font-weight:500}dialog{background:#111111;color:var(--ink);border:1px solid #ffffff22;border-radius:22px;padding:24px;width:calc(100% - 40px);max-width:380px}dialog::backdrop{background:#0009}dialog h2{font-size:20px;margin:0 0 12px}dialog p{font-size:13px;line-height:1.7;color:#bcb9c2}.scan-actions{display:flex;flex-direction:column;gap:10px}.scan-actions button{background:#fa2d48;color:#fff;border-radius:12px;font-size:15px}.scan-actions .secondary{background:#ffffff10}.scan-actions .dismiss{background:transparent;color:#bcb9c2}#scanMessage{min-height:22px;overflow-wrap:anywhere}
+
+.queue-trigger{display:flex;gap:8px;font-size:13px;color:#ddd;margin:0 auto 18px;padding:9px 18px;border:1px solid #ffffff20;border-radius:12px}.queue-trigger svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6}#queueDialog{max-height:80svh;overflow:auto}.queue-heading{display:flex;justify-content:space-between;align-items:center}.queue-heading button{font-size:24px;padding:0 5px}.queue-list{padding:0;list-style:none;counter-reset:tracks}.queue-list li{display:grid;grid-template-columns:24px 1fr auto;gap:8px;padding:14px 0;border-bottom:1px solid #ffffff12;align-items:start}.queue-list li:before{counter-increment:tracks;content:counter(tracks);color:#777;font-size:12px;padding-top:3px}.queue-list strong{font-size:14px;font-weight:500;display:block;line-height:1.4}.queue-list small{font-size:11px;color:#999;display:block;margin-top:4px;line-height:1.4}.queue-list time{font-size:11px;color:#888;padding-top:3px}#queueRefresh{background:#ffffff12;border-radius:10px;width:100%;font-size:13px}
+@media(display-mode:standalone){.home-tip{display:none}}
+
+.seek-wrap{position:relative;height:28px;display:flex;align-items:center}.seek-range{position:absolute;inset:0;width:100%;height:28px;appearance:none;-webkit-appearance:none;background:transparent;margin:0;touch-action:pan-y;cursor:pointer}.seek-range::-webkit-slider-runnable-track{height:4px;background:transparent}.seek-range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;margin-top:-4px}.seek-range:disabled::-webkit-slider-thumb{background:transparent}.seek-range::-moz-range-track{background:transparent}.seek-range::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff}#scanVideo{width:100%;max-height:300px;border-radius:14px;background:#000;margin:12px 0}#scanVideo[hidden]{display:none}.feature-buttons{display:flex;gap:12px;justify-content:center}.lyrics-lines{font-size:21px;line-height:1.75;white-space:pre-wrap;color:#eee}#lyricsDialog{max-height:80svh;overflow:auto}#lyricsRefresh{background:#ffffff12;border-radius:10px;width:100%}
+.queue-list li{grid-template-columns:24px 1fr}.queue-song{display:grid;grid-template-columns:1fr auto;gap:8px;text-align:left;padding:0;width:100%;background:transparent;color:#fff;align-items:start}.queue-song:disabled{opacity:.45}
+
+/* A real width is required: the absolute range contributes no flex width. */
+.seek-wrap>.track{flex:1 1 auto;width:100%;min-width:0;pointer-events:none}.seek-wrap{width:100%;isolation:isolate}.seek-range{z-index:2}.track{position:relative;z-index:1;background:#ffffff30;min-height:4px}.fill{height:100%;transition:width .15s linear}.seek-range:focus{outline:none}.seek-range:focus-visible{outline:2px solid var(--pink);outline-offset:3px}
+.queue-list li{grid-template-columns:2ch minmax(0,1fr);column-gap:8px}.queue-list li:before{text-align:right}.queue-song{justify-items:stretch;place-items:start stretch;text-indent:0}.queue-song>div{min-width:0;width:100%;text-align:left}.queue-song strong,.queue-song small{text-indent:0;text-align:left}
+.lyrics-panel[hidden]{display:none}.lyrics-panel{margin:22px 0 0}.lyrics-heading{display:flex;justify-content:space-between;align-items:center}.lyrics-heading h2{font-size:13px;font-weight:500;color:#999;margin:0}.lyrics-heading button,.lyrics-actions button{font-size:11px;color:#aaa;padding:8px 10px;border-radius:9px;background:#ffffff0a}.lyrics-panel #lyricsStatus{font-size:10px;color:#777;line-height:1.6;margin:8px 0 12px}.lyrics-viewport{position:relative;height:360px;height:min(48svh,430px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;mask-image:linear-gradient(transparent,#000 9%,#000 86%,transparent);-webkit-mask-image:linear-gradient(transparent,#000 9%,#000 86%,transparent)}.lyrics-viewport::-webkit-scrollbar{display:none}.lyrics-lines{position:relative;padding:100px 4px max(220px,32svh);white-space:pre-wrap}.lyric-line{font-size:26px;font-weight:650;line-height:1.55;margin:0 0 22px;color:#fff;opacity:.4;transform-origin:left center;transition:opacity .25s,transform .3s;overflow-wrap:anywhere}.lyric-line.active{opacity:1;transform:scale(1.015)}.lyric-line.past{opacity:.28}.lyric-word{background:linear-gradient(90deg,#fff var(--word-fill,0%),#ffffff60 var(--word-fill,0%));background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-fill-color:transparent}.lyric-line.past .lyric-word{--word-fill:100%!important}.lyrics-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}.lyrics-mode .cover{display:none}.lyrics-mode .info{margin-top:4px}.lyrics-mode .info h1{font-size:21px}.lyrics-mode .artist{font-size:13px}.lyrics-mode .album{font-size:11px}.lyrics-mode .timeline{margin-top:16px}
+@media(display-mode:standalone){main{padding-top:max(72px,calc(env(safe-area-inset-top,0px) + 20px));padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}}html.standalone main{padding-top:max(72px,calc(env(safe-area-inset-top,0px) + 20px))}
+
+.lyrics-calibration{display:flex;justify-content:space-between;gap:4px;margin-top:8px}.lyrics-calibration button{font-size:10px;color:#aaa;padding:10px 5px;border-radius:8px;background:#ffffff08}.lyrics-calibration #lyricsOffset{color:#ddd}.lyrics-actions button[hidden]{display:none}.lyrics-actions #lyricsRefresh{width:auto}
+</style></head><body>
+<main><header><div class="brand">MUSIC / REMOTE</div><div class="header-actions"><div class="status"><i id="dot" class="dot"></i><span id="connection" role="status">正在连接</span></div><button id="scanOpen" class="scan-trigger" aria-label="扫描连接二维码"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M7 7h3v3H7zm7 0h3v3h-3zm-7 7h3v3H7zm7 0h3v3h-3z"/></svg>扫码</button></div></header>
+<div class="cover"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true"><path d="M20 9v24.2a8 8 0 1 0 4 6.8V18l14-3v14.2a8 8 0 1 0 4 6.8V4L20 9z"/></svg><img id="art" alt="当前歌曲专辑封面" hidden></div>
+<div class="info"><div class="eyebrow">NOW PLAYING · WINDOWS</div><h1 id="title">等一首好音乐</h1><div id="artist" class="artist">Apple Music</div><div id="album" class="album">你的电脑，你的音乐。</div></div>
+<section id="lyricsPanel" class="lyrics-panel" aria-labelledby="lyricsTitle" hidden><div class="lyrics-heading"><h2 id="lyricsTitle">歌词</h2><button id="lyricsClose" aria-label="收起歌词">收起</button></div><p id="lyricsStatus" role="status">正在读取同步歌词…</p><div id="lyricsViewport" class="lyrics-viewport" tabindex="0"><div id="lyricsLines" class="lyrics-lines"></div></div><div class="lyrics-calibration" aria-label="歌词同步微调"><button id="lyricsEarlier" title="声音比歌词快时，提前歌词">提前 0.25 秒</button><button id="lyricsOffset" title="点击恢复默认同步">同步微调：0 秒</button><button id="lyricsLater" title="歌词比声音快时，延后歌词">延后 0.25 秒</button></div><div class="lyrics-actions"><button id="lyricsFollow" hidden>回到正在播放</button><button id="lyricsRefresh">刷新</button></div></section>
+<div class="timeline" aria-label="播放进度"><div class="seek-wrap"><div class="track"><div class="fill" id="progress"></div></div><input id="seek" class="seek-range" type="range" min="0" max="0" step="0.1" value="0" aria-label="播放进度，可拖动" disabled></div><div class="times"><span id="elapsed">0:00</span><span id="duration">0:00</span></div></div>
+<div class="transport"><button id="previous" aria-label="上一首" disabled><svg viewBox="0 0 32 32"><path d="M6 7h3v18H6zM26 7v18L11 16z"/></svg></button><button class="play" id="toggle" aria-label="播放" disabled><svg viewBox="0 0 32 32"><path id="playIcon" d="M11 6l16 10-16 10z"/></svg></button><button id="next" aria-label="下一首" disabled><svg viewBox="0 0 32 32"><path d="M23 7h3v18h-3zM6 7l15 9-15 9z"/></svg></button></div>
+<div class="feature-buttons"><button id="queueOpen" class="queue-trigger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h12M4 12h12M4 18h8m6-4 4 3-4 3z"/></svg>待播放</button><button id="lyricsOpen" class="queue-trigger">歌词</button></div>
+<div class="volume"><div class="volume-head"><span>电脑音量</span><span id="volumeText">—</span></div><div class="volume-row"><button id="mute" aria-label="静音或取消静音" disabled><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 4V5L7 9H3zm12-2v2a4 4 0 0 1 0 6v2a6 6 0 0 0 0-10z"/></svg></button><input id="volume" class="range" aria-label="电脑主音量" type="range" min="0" max="100" value="35" disabled><span aria-hidden="true"><svg width="19" height="19" viewBox="0 0 24 24" fill="#9f98a9"><path d="M2 9v6h4l5 4V5L6 9H2zm12-3v2a5 5 0 0 1 0 8v2a7 7 0 0 0 0-12zm3-4v2a10 10 0 0 1 0 16v2a12 12 0 0 0 0-20z"/></svg></span></div><div id="volumeNote" class="volume-label">调整电脑端的主音量</div></div>
+<div id="note" class="note" role="status">请保持电脑上的遥控器程序运行。</div><div class="footer"><svg viewBox="0 0 16 16"><rect x="3" y="6" width="10" height="8" rx="2"/><path d="M5 6V4a3 3 0 0 1 6 0v2"/></svg>同一 Wi-Fi · 本地连接</div>
+</main><div id="toast" class="toast" role="alert" hidden></div>
+<dialog id="queueDialog" aria-labelledby="queueTitle"><div class="queue-heading"><h2 id="queueTitle">待播放</h2><button id="queueClose" aria-label="关闭待播放列表">×</button></div><p id="queueStatus" role="status">正在读取 Apple Music 队列…</p><ol id="queueList" class="queue-list"></ol><button id="queueRefresh">刷新列表</button></dialog>
+<dialog id="scanDialog" aria-labelledby="scanTitle"><h2 id="scanTitle">扫码连接电脑</h2><p>对准电脑的连接二维码，实时识别，不需要拍照。</p><video id="scanVideo" playsinline autoplay muted hidden></video><canvas id="scanCanvas" hidden></canvas><div class="scan-actions"><button id="scanCamera">开始实时扫码</button><button id="scanAlbum" class="secondary">从相册选择</button><button id="scanClose" class="dismiss">取消</button></div><p id="scanMessage" role="status">识别在手机本地完成，图片不会上传。</p></dialog>
+
+<input id="scanImage" type="file" accept="image/*" hidden>
+<script>
+'use strict';
+if(typeof navigator!=='undefined'&&navigator.standalone)document.documentElement.classList.add('standalone');
+(function(root){
+  'use strict';
+  function parse(value){
+    let text=String(value||'').replace(/[\u200B\uFEFF]/g,'').trim();
+    if(!/^https?:\/\//i.test(text)&&/^\d+\.\d+\.\d+\.\d+(?::\d+)?\//.test(text))text='http://'+text;
+    let url;try{url=new URL(text);}catch{throw Error('二维码中不是有效的网址，请对准电脑上的连接二维码。');}
+    if(!['http:','https:'].includes(url.protocol)||url.username||url.password)throw Error('请扫描电脑遥控器页面上的连接二维码。');
+    const hostname=url.hostname.toLowerCase().replace(/^\[|\]$/g,'');
+    if(hostname==='localhost'||hostname==='127.0.0.1')throw Error('这是电脑本机地址。请扫描电脑页面中以 192.168、10 或 172 开头的手机连接二维码。');
+    const parts=hostname.split('.').map(Number);
+    const ipv4=parts.length===4&&parts.every(n=>Number.isInteger(n)&&n>=0&&n<=255);
+    const local=ipv4&&(parts[0]===10||(parts[0]===192&&parts[1]===168)||(parts[0]===172&&parts[1]>=16&&parts[1]<=31)||(parts[0]===169&&parts[1]===254));
+    if(!(local||hostname.endsWith('.local')||/^(?:fd|fc)[a-f0-9:]+$/.test(hostname)))throw Error('二维码指向陌生地址，请扫描电脑上的局域网连接二维码。');
+    let fragment;try{fragment=decodeURIComponent(url.hash.slice(1));}catch{fragment=url.hash.slice(1);}
+    const params=new URLSearchParams(fragment.replace(/^\?/,''));
+    const token=params.get('token')||params.get('key')||url.searchParams.get('token')||url.searchParams.get('key')||fragment;
+    if(!/^[A-Za-z0-9_-]{20,128}$/.test(token))throw Error('这个二维码没有配对信息。请扫描电脑连接页面中的二维码，而不是浏览器地址或路由器二维码。');
+    url.pathname='/app/7/';url.search='';url.hash=token;
+    return url.href;
+  }
+  root.RemotePairing={parse};
+  if(typeof module!=='undefined'&&module.exports)module.exports=root.RemotePairing;
+})(typeof window!=='undefined'?window:globalThis);
+
+const $=id=>document.getElementById(id), UI_VERSION='9', APP_PATH='/app/9/';
+let token=location.hash.slice(1),timer,toastTimer,artUrl='',coverVersion='',artRequest=0;
+let busy=false,dragging=false,volumeUntil=0,lastState=null,polling=false,pending=null,pendingTrack=null;
+let commandEpoch=0,refreshId=0,stateAbort=null,socket=null,socketRetry,pushConnected=false;
+let seekDragging=false,seekUntil=0,seekOriginKey='',seekBusy=false,scannerUrl='';
+try{scannerUrl=localStorage.getItem('remoteScannerUrl')||'';}catch{}
+let cachedArt='',cachedArtVersion='',lastSaved=0,lastSavedTrack='';
+try{if(token)localStorage.setItem('remoteToken',token);else token=localStorage.getItem('remoteToken')||sessionStorage.getItem('remoteToken')||'';}catch{}
+if(token&&(location.pathname!==APP_PATH||!location.hash))history.replaceState(null,'',APP_PATH+'#'+token);
+const headers=()=>({'Authorization':'Bearer '+token,'Content-Type':'application/json'});
+const trackKey=s=>[s?.title,s?.artist,s?.album].join('\n');
+function toast(text){$('toast').textContent=text;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
+async function api(path,options={}){
+  const response=await fetch(path,{...options,headers:headers(),cache:'no-store',signal:options.signal||AbortSignal.timeout(10000)});
+  if(response.status===401)throw Error('连接码已失效，请点击右上角扫码重新连接。');
+  if(!response.ok){let message='暂时无法连接，正在重试。请确认电脑已开机并与手机连接同一 Wi-Fi。';try{message=(await response.json()).error||message;}catch{}throw Error(message);}
+  return response;
+}
+function stamp(seconds){seconds=Math.max(0,Math.floor(seconds||0));return Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0');}
+function controls(state){for(const id of ['previous','toggle','next'])$(id).disabled=busy||!state?.available||!state?.controls?.[id];$('volume').disabled=state?.volume==null;$('mute').disabled=busy||state?.volume==null;$('seek').disabled=seekBusy||!state?.controls?.seek||!state?.duration;}
+function clearCover(){++artRequest;$('art').hidden=true;coverVersion='';if(artUrl)URL.revokeObjectURL(artUrl);artUrl='';cachedArt='';cachedArtVersion='';}
+function inlineCover(state){
+  ++artRequest;if(artUrl)URL.revokeObjectURL(artUrl);artUrl='';
+  $('art').src=state.cover_data;$('art').hidden=false;coverVersion=state.cover;
+  cachedArt=state.cover_data;cachedArtVersion=state.cover;
+}
+async function artwork(version){
+  if(version===coverVersion)return;
+  if(!version){clearCover();return;}
+  const request=++artRequest;
+  try{
+    const response=await api('/api/cover?v='+encodeURIComponent(version));
+    const blob=await response.blob();
+    if(request!==artRequest||lastState?.cover!==version)return;
+    const next=URL.createObjectURL(blob);$('art').src=next;$('art').hidden=false;
+    if(artUrl)URL.revokeObjectURL(artUrl);artUrl=next;coverVersion=version;
+    const reader=new FileReader();reader.onload=()=>{if(coverVersion===version){cachedArt=String(reader.result);cachedArtVersion=version;if(lastState)saveView(lastState,true);}};reader.readAsDataURL(blob);
+  }catch{if(request===artRequest)$('art').hidden=true;}
+}
+function saveView(state,force=false){
+  const key=trackKey(state)+'|'+state.cover;
+  if(!force&&key===lastSavedTrack&&Date.now()-lastSaved<2000)return;
+  lastSaved=Date.now();lastSavedTrack=key;
+  try{
+    const clean={...state};delete clean.cover_data;
+    localStorage.setItem('remoteViewV5',JSON.stringify({token,state:clean,cover_data:cachedArtVersion===state.cover?cachedArt:'',savedAt:Date.now()}));
+  }catch{}
+}
+function render(state,restored=false){
+if(typeof state.scanner_url==='string'&&state.scanner_url){scannerUrl=state.scanner_url;try{localStorage.setItem('remoteScannerUrl',scannerUrl);}catch{}}
+  if(state.ui_version&&state.ui_version!==UI_VERSION&&/^\d+$/.test(state.ui_version)){location.replace('/app/'+state.ui_version+'/#'+token);return;}
+  if(pendingTrack){
+    if(trackKey(state)!==pendingTrack.key||Date.now()>pendingTrack.until)pendingTrack=null;
+    else return;
+  }
+  if(pending){
+    if(pending.accepted&&state[pending.key]===pending.value)pending=null;
+    else if(Date.now()<pending.until)state={...state,[pending.key]:pending.value};
+    else pending=null;
+  }
+  const changed=lastState&&trackKey(lastState)!==trackKey(state);
+  if(changed){clearCover();seekDragging=false;seekUntil=0;}
+  lastState=state;
+  if(changed)resetLyricsForTrack();
+  if(!restored)rememberPlayback(state);
+  $('connection').textContent=state.available?'已连接':'等待 Apple Music';$('dot').classList.add('live');
+  $('title').textContent=state.title||'等一首好音乐';$('artist').textContent=state.artist||'Apple Music';$('album').textContent=state.album||'';
+  $('note').textContent=state.message||'音乐从电脑播放，手机随手控制。';
+  $('playIcon').setAttribute('d',state.playing?'M8 6h6v20H8zM19 6h6v20h-6z':'M11 6l16 10-16 10z');
+  $('toggle').setAttribute('aria-label',state.playing?'暂停':'播放');
+  if(!seekDragging&&seekUntil&&Math.abs(state.position-Number($('seek').value))<1)seekUntil=0;
+  if(!seekDragging&&Date.now()>seekUntil){$('progress').style.width=(state.duration?Math.min(100,100*state.position/state.duration):0)+'%';$('elapsed').textContent=stamp(state.position);$('seek').max=state.duration||0;$('seek').value=state.position||0;}
+  $('duration').textContent=stamp(state.duration);
+  if(!dragging&&Date.now()>volumeUntil){$('volume').value=state.volume??0;$('volumeText').textContent=state.volume==null?'不可用':state.volume+'%';}
+  $('volumeNote').textContent=state.muted?'电脑已静音 · 点击左侧图标取消静音':'调整电脑端的主音量';
+  $('mute').setAttribute('aria-label',state.muted?'取消静音':'静音');controls(state);
+  if(state.cover_data&&state.cover)inlineCover(state);
+  else if(!restored)void artwork(state.cover||'');
+  if(pending)$('note').textContent='正在确认电脑播放状态…';
+  if(restored){controls(null);$('connection').textContent='正在连接';$('dot').classList.remove('live');$('note').textContent='上次播放 · 正在连接电脑…';}
+  else saveView(state);
+}
+function interrupted(message){playbackPlaying=false;$('connection').textContent='正在重连';$('dot').classList.remove('live');$('note').textContent=message||'暂时无法连接，正在自动重试。';controls(null);}
+function cancelPoll(){++refreshId;if(stateAbort)stateAbort.abort();stateAbort=null;polling=false;clearTimeout(timer);}
+async function refresh(){
+  if(polling||pushConnected)return;
+  polling=true;const epoch=commandEpoch,id=++refreshId,controller=new AbortController();stateAbort=controller;
+  const deadline=setTimeout(()=>controller.abort(),2000);
+  try{
+    if(!token)throw Error('请点击右上角扫码，连接电脑上的遥控器。');
+    const sent=playbackNow();
+    const state=await(await api('/api/state',{signal:controller.signal})).json();
+    observeTransit(playbackNow()-sent);
+    if(id!==refreshId||epoch!==commandEpoch||pushConnected)return;render(state);
+  }catch(error){if(id===refreshId&&epoch===commandEpoch&&!pushConnected)interrupted(error.name==='AbortError'?'连接暂时没有回应，正在重试…':error.message);}
+  finally{clearTimeout(deadline);if(id===refreshId){polling=false;stateAbort=null;clearTimeout(timer);if(!document.hidden&&!pushConnected)timer=setTimeout(refresh,pendingTrack?200:1000);}}
+}
+function startLive(){
+  clearTimeout(socketRetry);
+  if(document.hidden)return;
+  if(typeof WebSocket==='undefined'||!token){refresh();return;}
+  const current=new WebSocket((location.protocol==='https:'?'wss:':'ws:')+'//'+location.host+'/events');socket=current;
+  const deadline=setTimeout(()=>{if(socket===current&&!pushConnected){refresh();current.close();}},1800);
+  let clockSent=0,clockTimer;
+  const pingClock=()=>{if(socket===current&&current.readyState===1){clockSent=playbackNow();current.send('clock');clockTimer=setTimeout(pingClock,15000);}};
+  current.onopen=()=>{if(socket===current){current.send(JSON.stringify({token}));pingClock();}};
+  current.onmessage=event=>{
+    if(socket!==current)return;
+    try{const state=JSON.parse(event.data);if(state.type==='clock'){observeTransit(playbackNow()-clockSent);return;}clearTimeout(deadline);pushConnected=true;cancelPoll();render(state);}catch{}
+  };
+  current.onerror=()=>{if(socket===current&&!pushConnected)refresh();};
+  current.onclose=event=>{
+    clearTimeout(clockTimer);
+    clearTimeout(deadline);if(socket!==current)return;
+    socket=null;pushConnected=false;
+    if(event.code===1008){interrupted('配对已失效，请点击右上角扫码。');return;}
+    if(!document.hidden){interrupted();refresh();socketRetry=setTimeout(startLive,1000);}
+  };
+}
+function reconnect(){
+  clearTimeout(socketRetry);cancelPoll();pushConnected=false;
+  const old=socket;socket=null;if(old)old.close();
+  if(!document.hidden)startLive();
+}
+function requestFresh(){if(socket&&socket.readyState===1&&pushConnected)socket.send('refresh');else{cancelPoll();refresh();}}
+async function command(action,value){
+  const previous=lastState?{...lastState}:null,epoch=++commandEpoch;
+  const key=action==='toggle'?'playing':action==='mute'?'muted':null;
+  if(key&&previous){pending={key,value:!previous[key],until:Date.now()+2500,accepted:false};render({...previous});}
+  if((action==='next'||action==='previous')&&previous){pendingTrack={key:trackKey(previous),until:Date.now()+5000};clearCover();$('title').textContent='正在切换歌曲…';$('artist').textContent='';$('album').textContent='';$('note').textContent='正在读取新歌曲';}
+  try{
+    const response=await api('/api/command',{method:'POST',body:JSON.stringify({action,value,...(action==='seek'?{track:seekOriginKey}:{})})});
+    if(epoch===commandEpoch&&pending)pending.accepted=true;
+    const result=typeof response.json==='function'?await response.json():null;
+    if(epoch===commandEpoch&&result?.state)render(result.state);
+    requestFresh();
+  }catch(error){if(epoch===commandEpoch){pending=null;pendingTrack=null;if(previous)render(previous);}if(action==='seek'){seekUntil=0;seekDragging=false;}toast(error.message);}
+}
+for(const action of ['previous','toggle','next','mute'])$(action).addEventListener('click',async()=>{if(busy)return;busy=true;controls(lastState);try{await command(action);}finally{busy=false;controls(lastState);}});
+$('volume').addEventListener('input',()=>{dragging=true;$('volumeText').textContent=$('volume').value+'%';});
+$('volume').addEventListener('change',async()=>{const value=Number($('volume').value);dragging=false;volumeUntil=Date.now()+1000;await command('volume',value);});
+$('volume').addEventListener('pointercancel',()=>{dragging=false;});
+function remoteQR(value){return window.RemotePairing.parse(value);}
+async function scanFile(file){
+  if(!file)return;
+  const message=$('scanMessage');
+  message.textContent='正在识别二维码…';
+  let objectUrl='';
+  try{
+    if(file.size>25*1024*1024)throw Error('图片太大，请重新拍摄或选择较小的二维码图片。');
+    if(typeof jsQR!=='function')throw Error('扫码组件尚未加载。请恢复连接后再试，或直接使用 iPhone 相机扫描电脑二维码。');
+    objectUrl=URL.createObjectURL(file);
+    const image=new Image();
+    await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=()=>reject(Error('无法读取图片，请用普通照片或截图重试。'));image.src=objectUrl;});
+    const canvas=document.createElement('canvas');
+    const context=canvas.getContext('2d',{willReadFrequently:true});
+    let code=null;
+    for(const size of [1600,900]){
+      const scale=Math.min(1,size/Math.max(image.naturalWidth,image.naturalHeight));
+      canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+      context.drawImage(image,0,0,canvas.width,canvas.height);
+      const pixels=context.getImageData(0,0,canvas.width,canvas.height);
+      code=jsQR(pixels.data,pixels.width,pixels.height,{inversionAttempts:'attemptBoth'});
+      if(code)break;
+    }
+    if(!code)throw Error('没有识别到二维码。请靠近一些，拍下完整、清晰的电脑二维码。');
+    const address=remoteQR(code.data);
+    message.textContent='识别成功，正在连接…';
+    location.assign(address);
+  }catch(error){message.textContent=error.message;}
+  finally{if(objectUrl)URL.revokeObjectURL(objectUrl);}
+}
+$('scanOpen').addEventListener('click',openScanner);
+$('scanClose').addEventListener('click',()=>{stopCamera();$('scanDialog').close();});$('scanDialog').addEventListener('close',stopCamera);
+$('scanCamera').addEventListener('click',openScanner);
+$('scanAlbum').addEventListener('click',()=>$('scanImage').click());
+for(const id of ['scanImage'])$(id).addEventListener('change',async()=>{const file=$(id).files[0];$(id).value='';await scanFile(file);});
+
+
+
+
+async function playQueue(index,queueId,title){
+  $('queueStatus').textContent='正在播放选择的歌曲…';
+  const buttons=$('queueList').querySelectorAll('button');for(const button of buttons)button.disabled=true;
+  try{await api('/api/queue/play',{method:'POST',body:JSON.stringify({index,queue_id:queueId})});$('queueDialog').close();clearCover();$('title').textContent='正在切换歌曲…';requestFresh();}
+  catch(error){$('queueStatus').textContent=error.message;}
+  finally{for(const button of buttons)button.disabled=false;}
+}
+
+async function loadQueue(){
+  const status=$('queueStatus'),list=$('queueList');
+  status.textContent='正在读取 Apple Music 队列…';$('queueRefresh').disabled=true;
+  try{
+    const data=await(await api('/api/queue')).json();list.replaceChildren();
+    if(!data.available){status.textContent=data.message||'暂时无法读取队列，请在电脑上打开 Apple Music。';return;}
+    const tracks=Array.isArray(data.tracks)?data.tracks:[];
+    for(const track of tracks){
+      const item=document.createElement('li'),play=document.createElement('button'),content=document.createElement('div'),title=document.createElement('strong'),detail=document.createElement('small'),duration=document.createElement('time');
+      title.textContent=track.title;detail.textContent=track.detail||'';duration.textContent=track.duration||'';
+      content.append(title,detail);play.className='queue-song';play.setAttribute('aria-label','播放 '+track.title);play.append(content,duration);play.addEventListener('click',()=>playQueue(tracks.indexOf(track),data.queue_id,track.title));item.append(play);list.append(item);
+    }
+    status.textContent=tracks.length?'已读取 '+tracks.length+' 首；更多曲目请在电脑端查看。':'当前没有可读取的待播放歌曲。';
+  }catch(error){status.textContent=error.message;}
+  finally{$('queueRefresh').disabled=false;}
+}
+$('queueOpen').addEventListener('click',()=>{$('queueDialog').showModal();loadQueue();});
+$('queueClose').addEventListener('click',()=>$('queueDialog').close());
+$('queueRefresh').addEventListener('click',loadQueue);
+// The app shell must finish opening before any optional decoder download.
+window.addEventListener('load',()=>{const script=document.createElement('script');script.src='/assets/jsQR-1.4.0.js';script.async=true;document.head.appendChild(script);},{once:true});
+
+
+$('seek').addEventListener('pointerdown',()=>{seekOriginKey=trackKey(lastState);});
+$('seek').addEventListener('input',()=>{if(!seekDragging)seekOriginKey=trackKey(lastState);seekDragging=true;$('progress').style.transition='none';$('progress').style.width=(Number($('seek').value)/Number($('seek').max)*100)+'%';$('elapsed').textContent=stamp(Number($('seek').value));});
+$('seek').addEventListener('change',async()=>{const value=Number($('seek').value);seekDragging=false;seekUntil=Date.now()+1800;seekBusy=true;controls(lastState);try{await command('seek',value);}finally{seekBusy=false;$('progress').style.transition='';controls(lastState);}});
+$('seek').addEventListener('pointercancel',()=>{seekDragging=false;seekUntil=0;$('progress').style.transition='';requestFresh();});
+let cameraStream=null,cameraTimer=null;
+function stopCamera(){clearTimeout(cameraTimer);if(cameraStream)for(const track of cameraStream.getTracks())track.stop();cameraStream=null;$('scanVideo').srcObject=null;$('scanVideo').hidden=true;}
+async function openScanner(){
+  if(!(window.isSecureContext&&typeof navigator!=='undefined'&&navigator.mediaDevices?.getUserMedia)){
+    try{const target=new URL(scannerUrl);if(target.protocol==='https:'){location.assign(target.href);return;}}catch{}
+    $('scanDialog').showModal();$('scanMessage').textContent='实时扫码需要配置 HTTPS 安全扫码页。请先连接电脑，或在设置中填写 scanner_url。';return;
+  }
+  if(!$('scanDialog').open)$('scanDialog').showModal();
+  if(typeof jsQR!=='function'){$('scanMessage').textContent='扫码组件加载中，请稍后再试。';return;}
+  stopCamera();
+  try{cameraStream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280}}});$('scanVideo').srcObject=cameraStream;$('scanVideo').hidden=false;await $('scanVideo').play();$('scanMessage').textContent='对准完整的电脑连接二维码，识别后自动连接。';cameraFrame();}
+  catch(error){stopCamera();$('scanMessage').textContent=error.name==='NotAllowedError'?'请在 Safari 网站设置中允许相机后重试。':'无法打开相机，请关闭占用摄像头的应用后重试。';}
+}
+function cameraFrame(){
+  if(!cameraStream)return;const video=$('scanVideo'),canvas=$('scanCanvas');
+  if(video.readyState>=2&&video.videoWidth){const scale=Math.min(1,960/Math.max(video.videoWidth,video.videoHeight));canvas.width=Math.round(video.videoWidth*scale);canvas.height=Math.round(video.videoHeight*scale);const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(video,0,0,canvas.width,canvas.height);const image=context.getImageData(0,0,canvas.width,canvas.height);const code=jsQR(image.data,image.width,image.height,{inversionAttempts:'attemptBoth'});if(code){try{const address=remoteQR(code.data);stopCamera();location.assign(address);return;}catch(error){$('scanMessage').textContent=error.message;}}}
+  cameraTimer=setTimeout(cameraFrame,110);
+}
+window.addEventListener('pagehide',stopCamera);document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera();});
+let lyricsVisible=false,lyricsRequest=0,lyricsReloadTimer,lyricsFrame=0,lyricsFollow=true;
+let lyricDocument=null,lyricElements=[],activeLyric=-1,lyricSignature='',playbackPosition=0,playbackAnchor=0,playbackPlaying=false;
+const playbackNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
+let transitSeconds=0,transitSamples=[];
+function observeTransit(roundTripMs){
+  if(!Number.isFinite(roundTripMs)||roundTripMs<0||roundTripMs>4000)return;
+  transitSamples.push(roundTripMs);if(transitSamples.length>8)transitSamples.shift();
+  transitSeconds=Math.min(...transitSamples)/2000;
+}
+let lyricOffset=0;
+try{const saved=Number(localStorage.getItem('lyricOffsetSeconds'));if(Number.isFinite(saved))lyricOffset=Math.max(-5,Math.min(5,saved));}catch{}
+function rememberPlayback(state){playbackPlaying=Boolean(state.playing&&state.available);playbackPosition=(Number(state.position)||0)+(playbackPlaying?transitSeconds:0);playbackAnchor=playbackNow();}
+function estimatedPosition(){
+  if(seekDragging||Date.now()<seekUntil)return Number($('seek').value)||0;
+  return Math.min(lastState?.duration||Infinity,playbackPosition+(playbackPlaying?(playbackNow()-playbackAnchor)/1000:0));
+}
+function followCurrentLyric(smooth=true){
+  if(!lyricsFollow||activeLyric<0||!lyricElements[activeLyric])return;
+  const viewport=$('lyricsViewport'),line=lyricElements[activeLyric].element;
+  const top=Math.max(0,line.offsetTop-viewport.clientHeight*.4+line.offsetHeight/2);
+  if(typeof viewport.scrollTo==='function')viewport.scrollTo({top,behavior:smooth?'smooth':'auto'});else viewport.scrollTop=top;
+}
+function lyricTick(){
+  if(!lyricsVisible||document.hidden)return;
+  const position=Math.max(0,estimatedPosition()+lyricOffset),lines=lyricDocument?.timed_lines||[];
+  let index=-1;
+  for(let i=0;i<lines.length;i++){if(position>=lines[i].start)index=i;else break;}
+  if(index!==activeLyric){
+    activeLyric=index;
+    for(let i=0;i<lyricElements.length;i++){
+      const node=lyricElements[i].element;
+      node.classList.toggle('active',i===index);node.classList.toggle('past',i<index);
+      if(i===index)node.setAttribute('aria-current','true');else node.removeAttribute('aria-current');
+    }
+    followCurrentLyric();
+  }
+  if(index>=0&&lyricElements[index]){
+    const words=lines[index].words||[];
+    for(let wi=0;wi<words.length;wi++){
+      const word=words[wi],span=lyricElements[index].words[wi];if(!span)continue;
+      const end=Math.max(word.end,word.start+.001);
+      const fill=Math.min(100,Math.max(0,100*(position-word.start)/(end-word.start)));
+      span.style.setProperty('--word-fill',fill.toFixed(1)+'%');
+    }
+  }
+  lyricsFrame=requestAnimationFrame(lyricTick);
+}
+function startLyricsAnimation(){
+  if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(lyricsFrame);
+  if(lyricsVisible&&!document.hidden&&typeof requestAnimationFrame==='function')lyricsFrame=requestAnimationFrame(lyricTick);
+}
+function displayLyrics(data,force=false){
+  const timed=Array.isArray(data.timed_lines)?data.timed_lines:[];
+  const signature=trackKey(lastState)+'|'+data.source+'|'+data.mode+'|'+timed.length+'|'+(timed[0]?.start??'')+'|'+(data.lines||[]).length;
+  if(force||signature!==lyricSignature){
+    lyricSignature=signature;lyricDocument=data;lyricElements=[];activeLyric=-1;$('lyricsLines').replaceChildren();
+    const rows=timed.length?timed:(data.lines||[]).map(text=>({text,words:[]}));
+    for(const line of rows){
+      const element=document.createElement('div');element.className='lyric-line';const words=[];
+      if(line.words?.length){for(const word of line.words){const span=document.createElement('span');span.className='lyric-word';span.textContent=word.text;element.append(span);words.push(span);}}
+      else element.textContent=line.text;
+      $('lyricsLines').append(element);lyricElements.push({element,words});
+    }
+  }
+  const source=data.source==='apple_local'?'Apple Music 本机':data.source==='lrclib'?'LRCLIB':'Apple Music';
+  const precision=data.mode==='word'?'逐字／词同步':data.mode==='line'?'逐行同步':'文本歌词';
+  $('lyricsStatus').textContent=data.available?source+' · '+precision+(data.upgrade_pending?' · 正在查找更完整的时间信息':''):data.message||'暂时没有可读取的歌词。';
+  startLyricsAnimation();
+}
+async function loadLyrics(force=false){
+  if(!lyricsVisible||document.hidden)return;
+  const request=++lyricsRequest,key=trackKey(lastState);clearTimeout(lyricsReloadTimer);
+  if(!lyricDocument){$('lyricsStatus').textContent='正在读取同步歌词…';$('lyricsLines').replaceChildren();}
+  $('lyricsRefresh').disabled=true;
+  try{
+    const data=await(await api('/api/lyrics'+(force?'?refresh=1':''))).json();
+    if(request!==lyricsRequest||key!==trackKey(lastState)||!lyricsVisible)return;
+    displayLyrics(data,force);
+    if(data.upgrade_pending)lyricsReloadTimer=setTimeout(()=>loadLyrics(),1600);
+  }catch(error){if(request===lyricsRequest)$('lyricsStatus').textContent=error.message;}
+  finally{if(request===lyricsRequest)$('lyricsRefresh').disabled=false;}
+}
+function resetLyricsForTrack(){
+  lyricDocument=null;lyricSignature='';activeLyric=-1;lyricElements=[];
+  if(lyricsVisible){$('lyricsLines').replaceChildren();loadLyrics();}
+}
+function setLyricsVisible(visible){
+  lyricsVisible=visible;$('lyricsPanel').hidden=!visible;
+  document.body.classList.toggle('lyrics-mode',visible);
+  $('lyricsOpen').textContent=visible?'收起歌词':'歌词';$('lyricsOpen').setAttribute('aria-expanded',String(visible));
+  lyricsFollow=true;$('lyricsFollow').hidden=true;
+  if(visible){window.scrollTo?.({top:0,behavior:'smooth'});loadLyrics();startLyricsAnimation();}
+  else{++lyricsRequest;clearTimeout(lyricsReloadTimer);if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(lyricsFrame);}
+}
+$('lyricsOpen').addEventListener('click',()=>setLyricsVisible(!lyricsVisible));
+$('lyricsClose').addEventListener('click',()=>setLyricsVisible(false));
+$('lyricsRefresh').addEventListener('click',()=>loadLyrics(true));
+function changeLyricOffset(amount){
+  lyricOffset=amount===null?0:Math.round(Math.max(-5,Math.min(5,lyricOffset+amount))*100)/100;
+  try{localStorage.setItem('lyricOffsetSeconds',String(lyricOffset));}catch{}
+  $('lyricsOffset').textContent=lyricOffset===0?'同步微调：0 秒':(lyricOffset>0?'歌词提前 ':'歌词延后 ')+Math.abs(lyricOffset).toFixed(2)+' 秒';
+}
+$('lyricsEarlier').addEventListener('click',()=>changeLyricOffset(.25));
+$('lyricsLater').addEventListener('click',()=>changeLyricOffset(-.25));
+$('lyricsOffset').addEventListener('click',()=>changeLyricOffset(null));
+changeLyricOffset(0);
+$('lyricsFollow').addEventListener('click',()=>{lyricsFollow=true;$('lyricsFollow').hidden=true;followCurrentLyric();});
+for(const name of ['wheel','touchmove'])$('lyricsViewport').addEventListener(name,()=>{lyricsFollow=false;$('lyricsFollow').hidden=false;},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(lyricsReloadTimer);if(typeof cancelAnimationFrame==='function')cancelAnimationFrame(lyricsFrame);}else if(lyricsVisible){startLyricsAnimation();loadLyrics();}});
+
+document.addEventListener('visibilitychange',reconnect);window.addEventListener('online',reconnect);window.addEventListener('pageshow',reconnect);
+window.addEventListener('pagehide',()=>{cancelPoll();clearTimeout(socketRetry);pushConnected=false;const old=socket;socket=null;if(old)old.close();});
+$('art').addEventListener('error',()=>{$('art').hidden=true;coverVersion='';});
+try{const saved=JSON.parse(localStorage.getItem('remoteViewV5')||'null');if(saved?.token===token&&saved.state)render({...saved.state,cover_data:saved.cover_data},true);}catch{}
+if(typeof WebSocket==='undefined')refresh();else startLive();
+// Warm the versioned document cache without waiting for it to render the UI.
+if(!document.hidden)fetch(APP_PATH,{cache:'force-cache',headers:{}}).catch(()=>{});
+
+</script></body></html>
