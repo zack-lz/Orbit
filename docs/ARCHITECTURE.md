@@ -85,6 +85,27 @@ The web remote (`index.html`) talks to the bridge with the Apple Music Remote pr
 
 **Windows.** The original engine reads the Windows media session; queue and lyrics use small PowerShell helpers that drive the Apple Music window.
 
+## Relay: push and remote access
+
+`relay/worker.js` is a Cloudflare Worker (KV + one Durable Object class). It never sees the pairing token.
+
+**Keys.** Everything is derived with HKDF-SHA256 from the bridge's pairing token (salt `orbit-push-v1`):
+
+| `info` | Used for |
+|---|---|
+| `aes-gcm` | Push payload key (AES-256-GCM, AAD `orbit`) |
+| `orbit-sync` | Mailbox key (AES-256-GCM, AAD `state:<chan>` / `decide:<chan>`) |
+| `chan` (16 bytes) | Mailbox id |
+| `auth` (32 bytes) | Mailbox bearer secret (the relay stores only its SHA-256) |
+
+Ciphertext layout is `base64(nonce(12) ‖ ciphertext ‖ tag(16))` — CryptoKit's `combined`.
+
+**Push.** The app registers its APNs token (`POST /v1/register`) and receives `relay_id` + `relay_secret`, which it hands to the bridge (`POST /register`). To notify, the bridge sends `{enc, id}` to `/v1/push`; the relay adds a generic localized alert, `category: APPROVAL`, `mutable-content: 1` and forwards it to APNs. On the phone a notification service extension decrypts `enc` and replaces the text. No ciphertext ⇒ `category: OPEN`, no buttons.
+
+**Mailbox.** The bridge calls `POST /v1/chan/<chan>/sync` — uploading encrypted state when it changed (or every ≤ 90 s, every ≥ 4 s while a phone is active) and receiving encrypted decisions. The phone reads `GET …/state`, wakes the bridge with `POST …/poke` (optionally requesting a live quota reading) and answers with `POST …/decide`. A decision carries `{id, allow, ts, nonce}`; the bridge rejects stale (> 180 s) or replayed ones and only applies it to a pending request. The first successful `/sync` claims a channel.
+
+**Failover.** The app first tries the bridge on the LAN (1.2 s timeout); if that fails it uses the mailbox for 20 s before checking the LAN again. The last state is cached so the watch shows numbers instantly.
+
 ## Orbit app (for reference)
 
 SwiftUI, iOS 17 / watchOS 10. Sign in with Apple, Face ID lock, `UNUserNotificationCenter` with an `APPROVAL` category (Allow requires authentication), a `WKWebView` that hosts the web remote, and WatchConnectivity for syncing connection details and the sign-in state to the watch.

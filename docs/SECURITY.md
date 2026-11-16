@@ -23,9 +23,17 @@ The full pairing link (the QR code) **is** the key. Whoever has it can read your
 * Approval decisions are single-use and expire; the hook falls back to the normal prompt when nobody answers.
 * App side: Sign in with Apple, Face ID / passcode, re-lock after 30 s, hidden app-switcher snapshot, **Allow** on the lock screen requires authentication, connections wiped on sign-out or account change.
 
+## The relay (push and remote access)
+
+* The relay is a third party in the path, but it is **blind**: payloads and mailbox contents are AES-256-GCM ciphertext under keys derived from your pairing token, which never leaves your devices.
+* It does learn metadata: that a phone registered, when a bridge syncs, when pushes happen and their size.
+* Mailbox access needs a secret derived from the token; the channel id is derived too, so it cannot be guessed. A leaked relay database reveals no tokens and no readable data.
+* Replay and stale-message protection for remote decisions (timestamp window + single-use nonce, applied only to a pending request).
+* If you don't trust a shared relay, run your own ([relay/README.md](../relay/README.md)) and set `ORBIT_RELAY_URL`, or disable remote access with `ORBIT_REMOTE=0`.
+
 ## Known limits
 
-* **Plain HTTP.** The LAN connection is not encrypted; anyone who can sniff your Wi-Fi can read the key. Use a WPA2/WPA3 network you trust.
+* **Plain HTTP on the LAN.** The direct connection is not encrypted (the relay path is); anyone who can sniff your Wi-Fi can read the key. Use a WPA2/WPA3 network you trust.
 * **No per-device revocation.** Keys do not expire. To revoke everyone:
   * Mac: delete `~/.claude-watch/token` and run `launchctl kickstart -k gui/$(id -u)/com.orbit.bridge`, then re-pair.
   * Windows: run `STOP.bat`, delete `.state\pairing.key`, run `START.bat`, then re-pair.
