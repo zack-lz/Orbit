@@ -44,7 +44,7 @@ chmod +x "$DIR"/*.py
 
 # private venv (for the QR code); the bridge itself is stdlib-only
 if [ ! -x "$DIR/venv/bin/python" ]; then python3 -m venv "$DIR/venv"; fi
-"$DIR/venv/bin/pip" install -q --disable-pip-version-check qrcode
+"$DIR/venv/bin/pip" install -q --disable-pip-version-check qrcode cryptography
 
 # strong random pairing token (kept if it already exists)
 if [ ! -s "$DIR/token" ]; then

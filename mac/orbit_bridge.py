@@ -37,12 +37,11 @@ LOCAL_ADDRS = {"127.0.0.1", "::1", "::ffff:127.0.0.1"}
 
 def configure(port=None, token=None, home=None):
     """Let a host program (the Windows Apple Music remote) run this bridge in-process."""
-    global PORT, TOKEN, HOME, TOKEN_FILE, APNS_CONF, DEVICES_FILE
+    global PORT, TOKEN, HOME, TOKEN_FILE, DEVICES_FILE
     if home:
         HOME = str(home)
         os.makedirs(HOME, exist_ok=True)
         TOKEN_FILE = os.path.join(HOME, "token")
-        APNS_CONF = os.path.join(HOME, "apns.json")
         DEVICES_FILE = os.path.join(HOME, "devices.json")
     if port:
         PORT = int(port)
@@ -75,112 +74,191 @@ usage = {}  # latest usage snapshot
 pending = {}  # id -> {"info": {...}, "event": Event, "decision": None|dict}
 
 
-def summarize(hook):
-    """Turn a PermissionRequest hook payload into a short, watch-sized text."""
-    tool = hook.get("tool_name", "?")
+def _clean(text, limit):
+    import re
+    t = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", str(text))
+    t = re.sub(r"[\x00-\x08\x0b-\x1f\x7f]", " ", t)
+    t = re.sub(r"\s+", " ", t).strip()
+    return t if len(t) <= limit else t[:limit - 1].rstrip() + "…"
+
+
+def _short_path(p):
+    p = str(p)
+    parts = p.replace("\\", "/").rstrip("/").split("/")
+    return "/".join(parts[-2:]) if len(parts) > 2 else p
+
+
+def _pretty_tool(name):
+    if name.startswith("mcp__"):
+        parts = name.split("__")
+        return f"{parts[1]} · {parts[2]}" if len(parts) >= 3 else name
+    return name
+
+
+def _kv(ti, limit=110):
+    """Generic fallback: 'key: value; key: value' from scalar fields — never JSON braces."""
+    bits = []
+    for k, v in ti.items():
+        if isinstance(v, (str, int, float, bool)) and str(v).strip():
+            bits.append(f"{k}: {_clean(v, 40)}")
+        elif isinstance(v, (list, tuple)) and v:
+            bits.append(f"{k}: {len(v)}")
+    return _clean("; ".join(bits), limit)
+
+
+def describe(hook):
+    """Human-readable view of a PermissionRequest hook payload: {tool, summary (watch-sized), detail, cwd}."""
+    raw = hook.get("tool_name", "?")
     ti = hook.get("tool_input") or {}
-    if tool == "Bash":
-        text = ti.get("command", "")
-    elif tool in ("Edit", "Write", "Read", "MultiEdit", "NotebookEdit"):
-        text = ti.get("file_path") or ti.get("notebook_path") or ""
-    elif tool in ("WebFetch",):
-        text = ti.get("url", "")
-    elif tool in ("WebSearch",):
-        text = ti.get("query", "")
+    if isinstance(ti, str):
+        try:
+            ti = json.loads(ti)
+        except ValueError:
+            ti = {"input": ti}
+    if not isinstance(ti, dict):
+        ti = {}
+    desc = ti.get("description")
+    if raw == "Bash":
+        cmd = _clean(ti.get("command", ""), 400)
+        summary = _clean(desc, 110) if desc else _clean(cmd, 110)
+        detail = (_clean(desc, 200) + "\n" if desc else "") + cmd
+    elif raw in ("Edit", "MultiEdit", "Write", "Read", "NotebookEdit"):
+        path = ti.get("file_path") or ti.get("notebook_path") or ""
+        verb = {"Edit": "Edit", "MultiEdit": "Edit", "Write": "Write", "Read": "Read", "NotebookEdit": "Edit notebook"}[raw]
+        summary = _clean(f"{verb} {_short_path(path)}", 110)
+        detail = _clean(path, 300)
+    elif raw == "AskUserQuestion":
+        qs = ti.get("questions") or []
+        qs = [q for q in qs if isinstance(q, dict)]
+        first = _clean(qs[0].get("question", ""), 110) if qs else _clean(ti.get("question", ""), 110)
+        summary = first or "Claude has a question"
+        lines = []
+        for q in qs:
+            opts = " / ".join(_clean(o.get("label", ""), 30) for o in (q.get("options") or []) if isinstance(o, dict))
+            lines.append(_clean(q.get("question", ""), 160) + (f" [{opts}]" if opts else ""))
+        detail = "\n".join(lines)[:400] or summary
+    elif raw == "ExitPlanMode":
+        plan = str(ti.get("plan", "")).strip()
+        first = next((l.strip("#*- ").strip() for l in plan.splitlines() if l.strip()), "")
+        summary = _clean("Plan ready: " + first, 110) if first else "Plan ready for approval"
+        detail = _clean(plan, 400)
+    elif raw in ("Task", "Agent"):
+        summary = _clean(desc or ti.get("prompt", "") or ti.get("subagent_type", "subagent"), 110)
+        detail = _clean(ti.get("prompt", "") or summary, 400)
+    elif raw == "WebFetch":
+        summary = _clean(ti.get("url", ""), 110)
+        detail = _clean(f"{ti.get('url', '')} {ti.get('prompt', '')}", 400)
+    elif raw == "WebSearch":
+        summary = _clean(ti.get("query", ""), 110)
+        detail = summary
+    elif raw in ("TodoWrite",):
+        n = len(ti.get("todos") or [])
+        summary = f"Update todo list ({n})"
+        detail = summary
     else:
-        text = json.dumps(ti, ensure_ascii=False)
-    if ti.get("description"):
-        text = f"{ti['description']}\n{text}"
-    return tool, text[:400]
+        summary = _clean(desc, 110) if desc else _kv(ti)
+        detail = _kv(ti, 400) or summary
+    return {"tool": _pretty_tool(raw), "summary": summary or _pretty_tool(raw), "detail": detail or summary,
+            "cwd": os.path.basename((hook.get("cwd") or "").rstrip("/\\"))}
 
 
-APNS_CONF = os.path.join(HOME, "apns.json")      # {"key_id","team_id","topic","env","key_file"}
-DEVICES_FILE = os.path.join(HOME, "devices.json")  # push tokens registered by the Orbit iPhone app
-_jwt_cache = {"t": 0, "v": ""}
+def summarize(hook):
+    d = describe(hook)
+    return d["tool"], d["summary"]
+
+
+DEVICES_FILE = os.path.join(HOME, "devices.json")  # push relay registrations created by the Orbit iPhone app
+RELAY_UA = "OrbitBridge/1.0"
+DEFAULT_RELAY = os.environ.get("ORBIT_RELAY_URL", "https://orbit-relay.lzxzack.workers.dev")
 
 
 def load_devices():
+    """[{url, id, secret}] — one entry per phone. (Older raw-token entries are ignored.)"""
     try:
-        return json.load(open(DEVICES_FILE))
+        return [d for d in json.load(open(DEVICES_FILE)) if isinstance(d, dict) and d.get("id")]
     except Exception:  # noqa: BLE001
         return []
 
 
-def register_device(tok):
-    devs = [d for d in load_devices() if d != tok]
-    devs.append(tok)
+def save_devices(devs):
     with open(DEVICES_FILE, "w") as f:
         json.dump(devs[-5:], f)
-    os.chmod(DEVICES_FILE, 0o600)
-
-
-def _der_to_raw(der):
-    """ECDSA DER signature -> 64-byte r||s as JWT ES256 requires."""
-    assert der[0] == 0x30
-    i = 2 if der[1] < 0x80 else 2 + (der[1] & 0x7F)
-    parts = []
-    for _ in range(2):
-        assert der[i] == 0x02
-        ln = der[i + 1]
-        parts.append(der[i + 2:i + 2 + ln].lstrip(b"\x00").rjust(32, b"\x00"))
-        i += 2 + ln
-    return parts[0] + parts[1]
-
-
-def apns_jwt(conf):
-    import base64
-    import subprocess
-    if time.time() - _jwt_cache["t"] < 2400 and _jwt_cache["v"]:
-        return _jwt_cache["v"]
-    b64 = lambda b: base64.urlsafe_b64encode(b).rstrip(b"=").decode()  # noqa: E731
-    head = b64(json.dumps({"alg": "ES256", "kid": conf["key_id"]}).encode())
-    body = b64(json.dumps({"iss": conf["team_id"], "iat": int(time.time())}).encode())
-    signing = f"{head}.{body}".encode()
-    der = subprocess.run(["openssl", "dgst", "-sha256", "-sign", os.path.expanduser(conf["key_file"])],
-                         input=signing, capture_output=True, check=True).stdout
-    _jwt_cache.update(t=time.time(), v=f"{head}.{body}.{b64(_der_to_raw(der))}")
-    return _jwt_cache["v"]
-
-
-def send_apns(hook, rid):
-    """Push a time-sensitive Approve/Deny notification to the registered iPhone (mirrored to the watch)."""
-    import subprocess
     try:
-        conf = json.load(open(APNS_CONF))
-    except Exception:  # noqa: BLE001
+        os.chmod(DEVICES_FILE, 0o600)
+    except OSError:
+        pass
+
+
+def register_relay(url, rid, secret):
+    devs = [d for d in load_devices() if d["id"] != rid]
+    devs.append({"url": url.rstrip("/"), "id": rid, "secret": secret})
+    save_devices(devs)
+
+
+def _relay_url_ok(url):
+    """Only public https relays: the bridge must never be steered at a LAN address."""
+    import ipaddress
+    from urllib.parse import urlparse
+    u = urlparse(url)
+    if u.scheme != "https" or not u.hostname:
         return False
+    try:
+        ip = ipaddress.ip_address(u.hostname)
+        return not (ip.is_private or ip.is_loopback or ip.is_link_local)
+    except ValueError:
+        return "." in u.hostname and not u.hostname.endswith((".local", ".internal", ".lan"))
+
+
+def _derive(info, length=32):
+    """Keys shared with the phone: HKDF-SHA256(pairing token, info). The relay never sees the token."""
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+    return HKDF(algorithm=hashes.SHA256(), length=length, salt=b"orbit-push-v1", info=info).derive(TOKEN.encode())
+
+
+def push_key():
+    return _derive(b"aes-gcm")
+
+
+def encrypt_for_phone(obj):
+    """base64( nonce(12) || ciphertext || tag(16) ) — CryptoKit's AES.GCM `combined` layout."""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    nonce = os.urandom(12)
+    ct = AESGCM(push_key()).encrypt(nonce, json.dumps(obj, ensure_ascii=False).encode(), b"orbit")
+    return base64.b64encode(nonce + ct).decode()
+
+
+def send_push(hook, rid):
+    """Ask the push relay to notify the user's iPhone (mirrored to the watch). The text is end-to-end encrypted;
+    if encryption is unavailable the push carries no text and no Allow/Deny buttons (tap opens the app)."""
+    import urllib.error
+    import urllib.request
     devs = load_devices()
     if not devs:
         return False
-    tool, text = summarize(hook)
-    payload = json.dumps({
-        "aps": {
-            "alert": {"title": f"Claude 请求授权：{tool}", "body": text[:150]},
-            "sound": "default",
-            "category": "APPROVAL",
-            "interruption-level": "time-sensitive",
-        },
-        "id": rid,
-    }, ensure_ascii=False)
-    host = "api.push.apple.com" if conf.get("env") == "production" else "api.sandbox.push.apple.com"
-    ok = False
+    d0 = describe(hook)
     try:
-        jwt = apns_jwt(conf)
-    except Exception as e:  # noqa: BLE001
-        sys.stderr.write(f"apns jwt failed: {e}\n")
-        return False
-    for tok in devs:
-        r = subprocess.run([
-            "curl", "-s", "--http2", "-m", "10", "-o", "/dev/stderr", "-w", "%{http_code}",
-            "-X", "POST", f"https://{host}/3/device/{tok}",
-            "-H", f"authorization: bearer {jwt}", "-H", f"apns-topic: {conf['topic']}",
-            "-H", "apns-push-type: alert", "-H", "apns-priority: 10",
-            "-H", f"apns-expiration: {int(time.time()) + 120}", "-d", payload],
-            capture_output=True, text=True)
-        if r.stdout.strip() == "200":
+        enc = encrypt_for_phone({"tool": d0["tool"], "summary": d0["summary"], "cwd": d0["cwd"], "id": rid})
+    except Exception as e:  # noqa: BLE001  (e.g. `cryptography` not installed)
+        sys.stderr.write(f"push encryption unavailable, sending a generic push: {e}\n")
+        enc = ""
+    ok, dead = False, []
+    for d in devs:
+        req = urllib.request.Request(
+            d["url"] + "/v1/push", data=json.dumps({"enc": enc, "id": rid}).encode(), method="POST",
+            headers={"Content-Type": "application/json", "User-Agent": RELAY_UA,
+                     "X-Relay-Id": d["id"], "Authorization": "Bearer " + d["secret"]})
+        try:
+            urllib.request.urlopen(req, timeout=8).close()
             ok = True
-        else:
-            sys.stderr.write(f"apns push failed {r.stdout} {r.stderr}\n")
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 410):
+                dead.append(d["id"])
+            sys.stderr.write(f"relay push failed: HTTP {e.code}\n")
+        except Exception as e:  # noqa: BLE001
+            sys.stderr.write(f"relay push failed: {e}\n")
+    if dead:
+        save_devices([d for d in devs if d["id"] not in dead])
     return ok
 
 
@@ -496,6 +574,99 @@ def stats_loop():
         time.sleep(45)
 
 
+def apply_decision(rid, allow):
+    with lock:
+        p = pending.get(rid)
+        if not p or p["decision"] is not None:
+            return False
+        p["decision"] = {"behavior": "allow"} if allow else {"behavior": "deny", "message": "Denied from Orbit"}
+        p["event"].set()
+        history.append({"tool": p["info"]["tool"], "summary": p["info"]["summary"][:80], "allow": allow, "at": time.time()})
+    _remote_wake.set()
+    return True
+
+
+# ---------------- remote access: encrypted mailbox on the relay ----------------
+REMOTE_ON = os.environ.get("ORBIT_REMOTE", "1") != "0"
+_remote = {"active_until": 0.0, "last_upload": 0.0, "sig": None}
+_remote_wake = threading.Event()
+_consumed = set()
+
+
+def _chan():
+    return _derive(b"chan", 16).hex()
+
+
+def _sync_seal(obj, aad):
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    nonce = os.urandom(12)
+    return base64.b64encode(nonce + AESGCM(_derive(b"orbit-sync")).encrypt(nonce, json.dumps(obj, ensure_ascii=False).encode(), aad)).decode()
+
+
+def _sync_open(b64, aad):
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    raw = base64.b64decode(b64)
+    return json.loads(AESGCM(_derive(b"orbit-sync")).decrypt(raw[:12], raw[12:], aad))
+
+
+def _relay_call(path, body, timeout=35):
+    import urllib.request
+    req = urllib.request.Request(DEFAULT_RELAY.rstrip("/") + path, data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json", "User-Agent": RELAY_UA,
+                                          "Authorization": "Bearer " + _derive(b"auth").hex()})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read() or b"{}")
+
+
+def _apply_remote_decision(enc, chan):
+    try:
+        obj = _sync_open(enc, b"decide:" + chan.encode())
+    except Exception:  # noqa: BLE001
+        return
+    if abs(time.time() - float(obj.get("ts", 0))) > 180 or obj.get("n") in _consumed:
+        return                                         # stale or replayed
+    _consumed.add(obj.get("n"))
+    if len(_consumed) > 500:
+        _consumed.clear()
+    apply_decision(str(obj.get("id", "")), bool(obj.get("allow")))
+
+
+def remote_loop():
+    """Away from home the phone can't reach this computer, so it talks to an end-to-end encrypted mailbox on the
+    relay instead: this thread uploads fresh state and picks up Allow/Deny answers. Outbound HTTPS only."""
+    backoff = 5
+    while True:
+        try:
+            if not (REMOTE_ON and TOKEN):
+                time.sleep(10)
+                continue
+            _remote_wake.clear()
+            chan, now = _chan(), time.time()
+            with lock:
+                pend = any(p["decision"] is None for p in pending.values())
+                sig = (usage.get("five_hour_pct"), usage.get("seven_day_pct"), tuple(sorted(pending)), len(history))
+            active = now < _remote["active_until"]
+            body = {"wait": 20 if (active or pend) else 0}
+            if sig != _remote["sig"] or now - _remote["last_upload"] > 90 or (active and now - _remote["last_upload"] > 4):
+                body["enc"] = _sync_seal(snapshot_state(), b"state:" + chan.encode())
+            resp = _relay_call(f"/v1/chan/{chan}/sync", body)
+            if "enc" in body:
+                _remote.update(sig=sig, last_upload=now)
+            for enc in resp.get("decisions", []):
+                _apply_remote_decision(enc, chan)
+            if resp.get("poke"):
+                _remote["active_until"] = time.time() + 300
+                _remote["sig"] = None                       # upload again right away
+                if resp.get("probe"):
+                    threading.Thread(target=lambda: (live_probe(), _remote_wake.set()), daemon=True).start()
+            backoff = 5
+            _remote_wake.wait(0.3 if (active or pend or resp.get("poke")) else 5)
+        except Exception as e:  # noqa: BLE001
+            sys.stderr.write(f"remote sync: {e}\n")
+            backoff = min(120, backoff * 2)
+            time.sleep(backoff)
+
+
 def snapshot_state():
     with lock:
         items = [
@@ -801,21 +972,23 @@ class Handler(BaseHTTPRequestHandler):
             if not self._is_local():
                 return self._json(403, {"error": "local only"})
             rid = secrets.token_hex(6)
-            pushed = send_apns(body, rid)
+            pushed = send_push(body, rid)
             if not pushed and time.time() - last_watch_seen > WATCH_ACTIVE_SECONDS:
                 # No push possible and the watch app isn't open: don't delay the normal Mac prompt.
                 return self._json(200, {"decision": None, "reason": "watch inactive"})
-            tool, text = summarize(body)
+            d0 = describe(body)
             ev = threading.Event()
             info = {
                 "id": rid,
-                "tool": tool,
-                "summary": text,
-                "cwd": os.path.basename(body.get("cwd") or "") or None,
+                "tool": d0["tool"],
+                "summary": d0["summary"],
+                "detail": d0["detail"],
+                "cwd": d0["cwd"] or None,
                 "created_at": time.time(),
             }
             with lock:
                 pending[rid] = {"info": info, "event": ev, "decision": None}
+            _remote_wake.set()
             wait = min(int(body.get("_wait", WAIT_SECONDS)), 600)
             ev.wait(wait)
             with lock:
@@ -855,25 +1028,17 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/register":
             if not self._authed():
                 return self._json(401, {"error": "bad token"})
-            tok = str(body.get("token", ""))
-            if not tok.isalnum() or len(tok) < 32:
-                return self._json(400, {"error": "bad device token"})
-            register_device(tok)
+            url, rid, secret = (str(body.get(k, "")) for k in ("relay_url", "relay_id", "relay_secret"))
+            if not (_relay_url_ok(url) and rid.isalnum() and secret.isalnum() and 8 <= len(rid) <= 64 and 16 <= len(secret) <= 128):
+                return self._json(400, {"error": "bad relay registration"})
+            register_relay(url, rid, secret)
             return self._json(200, {"ok": True})
 
         if self.path == "/decide":
             if not self._authed():
                 return self._json(401, {"error": "bad token"})
-            rid, allow = body.get("id"), bool(body.get("allow"))
-            with lock:
-                p = pending.get(rid)
-                if not p or p["decision"] is not None:
-                    return self._json(404, {"error": "request gone"})
-                p["decision"] = {"behavior": "allow"} if allow else {
-                    "behavior": "deny", "message": "在 Apple Watch 上被拒绝"}
-                p["event"].set()
-                history.append({"tool": p["info"]["tool"], "summary": p["info"]["summary"][:80],
-                                "allow": allow, "at": time.time()})
+            if not apply_decision(body.get("id"), bool(body.get("allow"))):
+                return self._json(404, {"error": "request gone"})
             return self._json(200, {"ok": True})
 
         self._json(404, {"error": "not found"})
@@ -888,6 +1053,7 @@ def _serve():
     srv.daemon_threads = True
     threading.Thread(target=usage_loop, daemon=True).start()
     threading.Thread(target=stats_loop, daemon=True).start()
+    threading.Thread(target=remote_loop, daemon=True).start()
     print(f"Orbit bridge listening on :{PORT}", file=sys.stderr)
     return srv
 

@@ -60,4 +60,8 @@ Stops the service and removes the hooks it added, `~/.claude-watch/` and the Lau
 | `permission_hook.py`, `statusline.py` | Claude Code hook and status line |
 | `install.sh` | Installer / uninstaller |
 
+## Away from home & push
+
+Remote access and background push work through the Orbit relay (end-to-end encrypted; see the [main README](../README.md#push-notifications-and-the-relay)). They need outbound HTTPS and the `cryptography` package, which the installer / launcher installs. Disable remote access with `ORBIT_REMOTE=0`; use your own relay with `ORBIT_RELAY_URL`.
+
 See the [main README](../README.md), [architecture](../docs/ARCHITECTURE.md) and [security notes](../docs/SECURITY.md).
