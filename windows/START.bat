@@ -31,7 +31,7 @@ if errorlevel 1 goto failed
 echo ready> .venv\remote-ready
 :run
 if not exist ".venv\remote-ready" goto install
-.venv\Scripts\python.exe -c "import aiohttp, qrcode, yaml" >nul 2>&1
+.venv\Scripts\python.exe -c "import aiohttp, qrcode, yaml, cryptography" >nul 2>&1
 if errorlevel 1 goto install
 .venv\Scripts\python.exe setup_claude.py
 .venv\Scripts\python.exe background.py

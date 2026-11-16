@@ -60,6 +60,10 @@ State (keys, logs) lives in `.state\`: `pairing.key`, `server.log`, `runner.log`
 
 `STOP.bat` → `REMOVE_AUTO_START.bat` → delete the folder. To drop the Claude hook, remove the `permission_hook.py` entry from `%USERPROFILE%\.claude\settings.json` (backup: `settings.json.bak-orbit`).
 
+## Away from home & push
+
+Remote access and background push work through the Orbit relay (end-to-end encrypted; see the [main README](../README.md#push-notifications-and-the-relay)). They need outbound HTTPS and the `cryptography` package, which the installer / launcher installs. Disable remote access with `ORBIT_REMOTE=0`; use your own relay with `ORBIT_RELAY_URL`.
+
 See the [main README](../README.md), [architecture](../docs/ARCHITECTURE.md) and [security notes](../docs/SECURITY.md).
 
 Music engine and web remote © their original project, [Apple Music Remote](https://github.com/zack-lz/Apple-Music-Remote). QR decoding by [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0, `assets/jsQR-LICENSE.txt`).
