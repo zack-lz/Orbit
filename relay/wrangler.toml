@@ -1,0 +1,21 @@
+name = "orbit-relay"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+# Created by `wrangler kv namespace create KV`; paste the id here.
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[vars]
+TOPIC = "com.zixianlin.appletools"   # the app's bundle id; the relay serves only this app
+
+# Secrets (never commit them):  wrangler secret put APNS_KEY / APNS_KEY_ID / APNS_TEAM_ID
+
+[[durable_objects.bindings]]
+name = "MAILBOX"
+class_name = "Mailbox"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Mailbox"]
