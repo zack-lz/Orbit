@@ -93,13 +93,14 @@ export default {
         const ip = request.headers.get("CF-Connecting-IP") || "?";
         if ((await bump(env, `ip:${ip}:${Math.floor(Date.now() / 3.6e6)}`, 3700)) > REGISTER_PER_HOUR) return json({ error: "rate limited" }, 429);
         const b = await readJson(request);
-        if (!validToken(b.device_token) || !validEnv(b.env) || b.bundle !== env.TOPIC) return json({ error: "bad request" }, 400);
+        const topics = [env.TOPIC, env.TOPIC_WATCH].filter(Boolean);
+        if (!validToken(b.device_token) || !validEnv(b.env) || !topics.includes(b.bundle)) return json({ error: "bad request" }, 400);
         const id = rand(12), secret = rand(24);
         const tok = b.device_token.toLowerCase();
         const prev = await env.KV.get(`t:${tok}`);              // one registration per device: replace the old one
         if (prev) await env.KV.delete(`d:${prev}`);
         await env.KV.put(`t:${tok}`, id, { expirationTtl: TTL });
-        await env.KV.put(`d:${id}`, JSON.stringify({ token: b.device_token.toLowerCase(), env: b.env, h: await sha256hex(secret) }), { expirationTtl: TTL });
+        await env.KV.put(`d:${id}`, JSON.stringify({ token: b.device_token.toLowerCase(), env: b.env, topic: b.bundle, kind: b.bundle === env.TOPIC_WATCH ? "watch" : "phone", h: await sha256hex(secret) }), { expirationTtl: TTL });
         return json({ relay_id: id, relay_secret: secret });
       }
 
@@ -107,8 +108,11 @@ export default {
         const a = await authed(request, env);
         if (!a) return json({ error: "unauthorized" }, 401);
         const b = await readJson(request);
-        if (!validToken(b.device_token) || !validEnv(b.env)) return json({ error: "bad request" }, 400);
-        await env.KV.put(`d:${a.id}`, JSON.stringify({ ...a.rec, token: b.device_token.toLowerCase(), env: b.env }), { expirationTtl: TTL });
+        const hasTok = b.device_token !== undefined;
+        if ((hasTok && (!validToken(b.device_token) || !validEnv(b.env))) || (!hasTok && typeof b.muted !== "boolean" && typeof b.rich !== "boolean")) return json({ error: "bad request" }, 400);
+        // `muted` is the user's "which devices get alerts" choice (phone / watch / both): a muted registration is skipped on push.
+        const rec = { ...a.rec, ...(hasTok ? { token: b.device_token.toLowerCase(), env: b.env } : {}), ...(typeof b.muted === "boolean" ? { muted: b.muted } : {}), ...(typeof b.rich === "boolean" ? { rich: b.rich } : {}) };
+        await env.KV.put(`d:${a.id}`, JSON.stringify(rec), { expirationTtl: TTL });
         return json({ ok: true });
       }
 
@@ -118,23 +122,28 @@ export default {
         if ((await bump(env, `p:${a.id}:${Math.floor(Date.now() / 6e4)}`, 120)) > PUSH_PER_MINUTE) return json({ error: "rate limited" }, 429);
         const b = await readJson(request, 4096);
         if (typeof b.enc !== "string" || b.enc.length > 2800 || typeof b.id !== "string" || b.id.length > 64) return json({ error: "bad request" }, 400);
+        // A watch registration gets an attention ping that opens the watch app (it shows the request with details);
+        // the phone gets the encrypted text + Allow / Deny. Without ciphertext there is nothing to approve blindly.
+        if (a.rec.muted) return json({ ok: true, muted: true });
+        const full = b.enc && (a.rec.kind !== "watch" || a.rec.rich);   // `rich`: this watch build can decrypt the text itself
         const payload = {
           aps: {
             alert: { "title-loc-key": "push.title", "loc-key": "push.body" },   // localised by the app; replaced by the decrypted text
             sound: "default",
-            category: b.enc ? "APPROVAL" : "OPEN",   // without ciphertext there is nothing to approve blindly: tap opens the app
-            "mutable-content": b.enc ? 1 : 0,
+            category: full ? "APPROVAL" : "OPEN",
+            "mutable-content": full ? 1 : 0,
             "interruption-level": "time-sensitive",
           },
           id: b.id,
-          ...(b.enc ? { enc: b.enc } : {}),
+          ...(full ? { enc: b.enc } : {}),
         };
         const host = env.APNS_HOST || (a.rec.env === "production" ? "api.push.apple.com" : "api.sandbox.push.apple.com");
         const r = await fetch(`https://${host}/3/device/${a.rec.token}`, {
           method: "POST",
           headers: {
             authorization: `bearer ${await apnsJwt(env)}`,
-            "apns-topic": env.TOPIC,
+            "apns-topic": a.rec.topic || env.TOPIC,
+            "apns-collapse-id": b.id.slice(0, 60),
             "apns-push-type": "alert",
             "apns-priority": "10",
             "apns-expiration": String(Math.floor(Date.now() / 1000) + 120),
