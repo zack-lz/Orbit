@@ -65,3 +65,7 @@ Stops the service and removes the hooks it added, `~/.claude-watch/` and the Lau
 Remote access and background push work through the Orbit relay (end-to-end encrypted; see the [main README](../README.md#push-notifications-and-the-relay)). They need outbound HTTPS and the `cryptography` package, which the installer / launcher installs. Disable remote access with `ORBIT_REMOTE=0`; use your own relay with `ORBIT_RELAY_URL`.
 
 See the [main README](../README.md), [architecture](../docs/ARCHITECTURE.md) and [security notes](../docs/SECURITY.md).
+
+## License
+
+Copyright 2026 Zixian Lin. Licensed under the [PolyForm Noncommercial License 1.0.0](../LICENSE) (a copy is included as `LICENSE`): free for personal and other noncommercial use; no commercial use or resale without permission.
