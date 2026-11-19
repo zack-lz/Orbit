@@ -67,3 +67,7 @@ Remote access and background push work through the Orbit relay (end-to-end encry
 See the [main README](../README.md), [architecture](../docs/ARCHITECTURE.md) and [security notes](../docs/SECURITY.md).
 
 Music engine and web remote © their original project, [Apple Music Remote](https://github.com/zack-lz/Apple-Music-Remote). QR decoding by [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0, `assets/jsQR-LICENSE.txt`).
+
+## License
+
+Copyright 2026 Zixian Lin. Licensed under the [PolyForm Noncommercial License 1.0.0](../LICENSE) (a copy is included as `LICENSE`): free for personal and other noncommercial use; no commercial use or resale without permission.
