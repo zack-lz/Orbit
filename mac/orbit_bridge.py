@@ -676,6 +676,14 @@ def snapshot_state():
                 "server_time": time.time(), "history": list(history[-8:])[::-1], "stats": stats,
                 "host": socket.gethostname()}
     snap["forecast"] = forecast()
+    try:
+        # Current LAN addresses, so a phone with a stale (DHCP-changed) address can find its way back home.
+        snap["lan"] = [f"http://{ip}:{PORT}" for ip in lan_addresses()][:4]
+        h = socket.gethostname().split(".")[0]
+        if h:
+            snap["lan"].append(f"http://{h}.local:{PORT}")
+    except Exception:  # noqa: BLE001
+        pass
     return snap
 
 
