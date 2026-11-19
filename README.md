@@ -277,6 +277,10 @@ The Windows music engine and the web remote are derived from [Apple Music Remote
 
 ---
 
+## License
+
+Copyright 2026 Zixian Lin. This repository (the Orbit bridge for Mac and Windows, and the push relay) is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE): you may read, use, and modify it for personal and other noncommercial purposes, but you may not use it commercially or sell it without permission. The Orbit iPhone / Apple Watch app itself is not part of this repository. Third-party files keep their own licenses (see `assets/jsQR-LICENSE.txt`).
+
 ## 中文说明
 
 **Orbit 把你电脑上的 Claude Code 额度、授权请求和 Apple Music 带到 iPhone 和 Apple Watch 上。** 电脑照常工作，Orbit 让你随手可及。
@@ -447,5 +451,9 @@ Claude 的用量接口在 Anthropic 一侧有缓存，可能晚几分钟。Orbit
 ### 致谢
 
 Windows 音乐引擎和网页遥控器源自 [Apple Music Remote](https://github.com/zack-lz/Apple-Music-Remote)。二维码识别使用 [jsQR](https://github.com/cozmo/jsQR)（Apache-2.0，附许可证）；二维码生成使用 [`qrcode`](https://pypi.org/project/qrcode/)。Windows 上可选的在线歌词匹配使用 [LRCLIB](https://lrclib.net/)，默认关闭。
+
+### 许可证
+
+版权所有 2026 Zixian Lin。本仓库（Mac / Windows 版 bridge 与推送中转服务）采用 [PolyForm Noncommercial License 1.0.0](LICENSE) 许可：你可以出于个人及其他非商业目的阅读、使用和修改，但未经许可不得商用或出售。Orbit 的 iPhone / Apple Watch App 本身不在本仓库内。第三方文件保留其各自的许可证（见 `assets/jsQR-LICENSE.txt`）。
 
 详细说明见 [架构](docs/ARCHITECTURE.md)、[安全](docs/SECURITY.md)、[Mac 指南](mac/README.md)、[Windows 指南](windows/README.md)。
